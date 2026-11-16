@@ -8,12 +8,42 @@ let ratings = [];
 const API_URL = 'https://script.google.com/macros/s/AKfycbyVIEwxyOiyGOI9z1ygKAmKl8aFby4XegtulavxaLpgq9pSrub3vCnHLFxZb1waiIyt1A/exec';
 const SENHA_APP = '@m3lh0rGUI4'; // a mesma do Apps Script
 
+
 async function carregarDados() {
-  const res = await fetch(API_URL);
-  const dados = await res.json();
-  restaurants = dados.lugares;
-  ratings = dados.avaliacoes;
+    try {
+        console.log("Iniciando carregamento dos restaurantes...");
+
+        const res = await fetch(API_URL);
+
+        console.log("Resposta da API:", res.status);
+
+        if (!res.ok) {
+            throw new Error("Erro HTTP: " + res.status);
+        }
+
+        const dados = await res.json();
+
+        console.log("Dados recebidos:", dados);
+
+        if (!dados.lugares || !dados.avaliacoes) {
+            throw new Error("A API não retornou os dados esperados.");
+        }
+
+        restaurants = dados.lugares;
+        ratings = dados.avaliacoes;
+
+        console.log("Restaurantes carregados:", restaurants.length);
+
+    } catch (erro) {
+        console.error("Erro ao carregar dados:", erro);
+
+        alert(
+            "Não foi possível carregar os restaurantes. " +
+            "Verifique sua conexão com o banco de dados."
+        );
+    }
 }
+
 
 async function enviarAoSheets(lugar, avaliacao) {
   const res = await fetch(API_URL, {
