@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>guia-gdm | Nosso guia gastronômico</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <a href="#" class="logo">guia<span>-gdm</span></a>
+        <p>Nosso pequeno guia gastronômico.</p>
+    </header>
+
+    <main class="container">
+
+        <section class="intro">
+            <span class="eyebrow">COMER, DESCOBRIR, COMPARTILHAR</span>
+            <h1>Lugares que<br>merecem ser <em>descobertos.</em></h1>
+            <p>Uma coleção de lugares especiais compartilhados entre amigos.</p>
+        </section>
+
+        <section class="explore">
+
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">NOSSA COLEÇÃO</span>
+                    <h2>Explorar lugares</h2>
+                </div>
+                <span id="total-count" class="count">0 lugares</span>
+            </div>
+
+            <div class="search-box">
+                <span>⌕</span>
+                <input
+                    type="search"
+                    id="search"
+                    placeholder="Buscar por nome ou cidade..."
+                >
+            </div>
+
+            <div class="filters" id="filters">
+                <button class="filter active" data-category="Todos">Todos</button>
+                <button class="filter" data-category="Restaurante">Restaurantes</button>
+                <button class="filter" data-category="Cafeteria">Cafeterias</button>
+                <button class="filter" data-category="Bar">Bares</button>
+                <button class="filter" data-category="Outros">Outros</button>
+            </div>
+
+            <div class="restaurant-grid" id="restaurant-list"></div>
+
+            <div class="empty-state" id="empty-state" hidden>
+                <span>✳</span>
+                <h3>Nenhum lugar encontrado</h3>
+                <p>Tente outra busca ou adicione um novo estabelecimento.</p>
+            </div>
+
+        </section>
+
+        <section class="add-section">
+            <div>
+                <span class="eyebrow">CONHECE UM LUGAR LEGAL?</span>
+                <h2>Compartilhe com a gente.</h2>
+                <p>Ajude a aumentar nossa coleção de descobertas.</p>
+            </div>
+            <button class="add-button" id="open-form">
+                + Adicionar lugar
+            </button>
+        </section>
+
+    </main>
+
+    <footer>
+        <span class="logo">guia<span>-gdm</span></span>
+        <p>Feito para compartilhar boas descobertas.</p>
+    </footer>
+
+    <div class="modal" id="modal" hidden>
+        <div class="modal-content">
+            <button class="close-modal" id="close-form">×</button>
+
+            <span class="eyebrow">NOVA DESCOBERTA</span>
+            <h2>Adicionar lugar</h2>
+            <p>Compartilhe um estabelecimento com os amigos.</p>
+
+            
+
+    <form id="restaurant-form">
+
+        <span class="form-section-title">IDENTIFICAÇÃO</span>
+
+        <label for="name">Nome do estabelecimento *</label>
+        <input id="name" name="name" required
+            placeholder="Ex.: Café Aurora">
+
+        <div class="form-row">
+            <div>
+                <label for="city">Cidade *</label>
+                <input id="city" name="city" required
+                    placeholder="Sorocaba">
+            </div>
+            <div>
+                <label for="state">Estado *</label>
+                <input id="state" name="state" required
+                    placeholder="SP" maxlength="2">
+            </div>
+        </div>
+
+        <label for="category">Categoria *</label>
+        <select id="category" name="category" required>
+            <option value="">Selecione</option>
+            <option>Restaurante</option>
+            <option>Cafeteria</option>
+            <option>Bar</option>
+            <option>Outros</option>
+        </select>
+
+        <label for="cuisine">Tipo de culinária</label>
+        <input id="cuisine" name="cuisine"
+            placeholder="Ex.: Italiana, japonesa, brasileira...">
+
+        <label for="price">Faixa de preço *</label>
+        <select id="price" name="price" required>
+            <option value="">Selecione</option>
+            <option value="$">$ — Econômico</option>
+            <option value="$$">$$ — Moderado</option>
+            <option value="$$$">$$$ — Mais caro</option>
+            <option value="$$$$">$$$$ — Alto padrão</option>
+        </select>
+
+        <span class="form-section-title">LOCALIZAÇÃO</span>
+
+        <label for="address">Endereço</label>
+        <input id="address" name="address"
+            placeholder="Rua, número...">
+
+        <label for="neighborhood">Bairro</label>
+        <input id="neighborhood" name="neighborhood"
+            placeholder="Ex.: Centro">
+
+        <label for="maps">Link do Google Maps</label>
+        <input id="maps" name="maps" type="url"
+            placeholder="https://maps.google.com/...">
+
+        <label for="instagram">Instagram</label>
+        <input id="instagram" name="instagram"
+            placeholder="@restaurante">
+
+        <span class="form-section-title">EXPERIÊNCIA GASTRONÔMICA</span>
+
+        <label for="experience">Conte sobre o estabelecimento</label>
+        <textarea id="experience" name="experience"
+            placeholder="Conte sobre o ambiente, cardápio, pratos que valem a pena experimentar, atendimento e sua experiência..."
+            rows="5"></textarea>
+
+        <span class="form-section-title">SUA AVALIAÇÃO</span>
+
+        <p class="rating-instructions">
+            Deslize o controle para atribuir uma nota de 0 a 5.
+            Você pode usar valores intermediários.
+        </p>
+
+
+        <div class="rating-control" data-rating-control>
+            <label for="rating-food">Comida / produtos</label>
+            <div class="rating-line">
+                <div class="rating-stars-wrap">
+                    <span class="rating-stars">★★★★★</span>
+                    <input id="rating-food" name="ratingFood"
+                        type="range" min="0" max="5" step="0.1" value="0"
+                        aria-label="Nota para comida e produtos">
+                </div>
+                <span class="rating-value">Não avaliado</span>
+            </div>
+        </div>
+
+        <div class="rating-control" data-rating-control>
+            <label for="rating-service">Atendimento</label>
+            <div class="rating-line">
+                <div class="rating-stars-wrap">
+                    <span class="rating-stars">★★★★★</span>
+                    <input id="rating-service" name="ratingService"
+                        type="range" min="0" max="5" step="0.1" value="0"
+                        aria-label="Nota para atendimento">
+                </div>
+                <span class="rating-value">Não avaliado</span>
+            </div>
+        </div>
+
+        <div class="rating-control" data-rating-control>
+            <label for="rating-ambience">Ambiente</label>
+            <div class="rating-line">
+                <div class="rating-stars-wrap">
+                    <span class="rating-stars">★★★★★</span>
+                    <input id="rating-ambience" name="ratingAmbience"
+                        type="range" min="0" max="5" step="0.1" value="0"
+                        aria-label="Nota para ambiente">
+                </div>
+                <span class="rating-value">Não avaliado</span>
+            </div>
+        </div>
+
+        <div class="rating-control" data-rating-control>
+            <label for="rating-value">Custo-benefício</label>
+            <div class="rating-line">
+                <div class="rating-stars-wrap">
+                    <span class="rating-stars">★★★★★</span>
+                    <input id="rating-value" name="ratingValue"
+                        type="range" min="0" max="5" step="0.1" value="0"
+                        aria-label="Nota para custo-benefício">
+                </div>
+                <span class="rating-value">Não avaliado</span>
+            </div>
+        </div>
+
+        <div class="rating-control" data-rating-control>
+            <label for="rating-overall">Experiência geral</label>
+            <div class="rating-line">
+                <div class="rating-stars-wrap">
+                    <span class="rating-stars">★★★★★</span>
+                    <input id="rating-overall" name="ratingOverall"
+                        type="range" min="0" max="5" step="0.1" value="0"
+                        aria-label="Nota para experiência geral">
+                </div>
+                <span class="rating-value">Não avaliado</span>
+            </div>
+        </div>
+
+        <span class="form-section-title">INDICAÇÃO</span>
+
+        <label for="contributor">Quem está indicando?</label>
+        <input id="contributor" name="contributor"
+            placeholder="Seu nome">
+
+        <button type="submit" class="submit-button">
+            Adicionar ao guia
+        </button>
+
+    </form>
+
+
+        </div>
+    </div>
+
+    <!-- FICHA INDIVIDUAL DO ESTABELECIMENTO -->
+
+    
+
+    <div class="modal" id="detail-modal" hidden>
+        <div class="modal-content detail-content">
+
+            <button class="close-modal" id="close-detail">×</button>
+
+            <span class="eyebrow" id="detail-category"></span>
+
+            <h2 id="detail-name"></h2>
+            <p id="detail-city"></p>
+
+            <div id="detail-main-photo"></div>
+
+            <div class="detail-divider"></div>
+
+            <div class="detail-information">
+                <span class="detail-label">CULINÁRIA</span>
+                <p id="detail-cuisine"></p>
+            </div>
+
+            <div class="detail-information">
+                <span class="detail-label">FAIXA DE PREÇO</span>
+                <p id="detail-price"></p>
+            </div>
+
+            <div class="detail-information">
+                <span class="detail-label">EXPERIÊNCIA GASTRONÔMICA</span>
+                <p id="detail-experience"></p>
+            </div>
+
+            <div class="detail-divider"></div>
+
+            <div class="detail-information">
+                <span class="detail-label">LOCALIZAÇÃO</span>
+                <p id="detail-address"></p>
+                <a id="detail-maps" target="_blank"
+                    rel="noopener noreferrer">
+                    Abrir no Google Maps ↗
+                </a>
+            </div>
+
+            <div class="detail-information">
+                <span class="detail-label">INSTAGRAM</span>
+                <a id="detail-instagram" target="_blank"
+                    rel="noopener noreferrer"></a>
+            </div>
+
+            <div class="detail-divider"></div>
+
+            <div class="detail-information">
+                <span class="detail-label">AVALIAÇÕES DOS AMIGOS</span>
+                <div id="detail-ratings"></div>
+            </div>
+
+            <button class="submit-button" id="back-to-list">
+                Voltar para os lugares
+            </button>
+
+        </div>
+    </div>
+
+
+
+    <script src="script.js"></script>
+</body>
+</html>
