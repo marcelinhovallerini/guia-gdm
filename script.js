@@ -1,303 +1,633 @@
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>guia-gdm | Nosso guia gastronômico</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+// 1. NOSSA LISTA INICIAL DE RESTAURANTES
 
-    <header class="header">
-        <a href="#" class="logo">guia<span>-gdm</span></a>
-        <p>Nosso pequeno guia gastronômico.</p>
-    </header>
+let restaurants = [];
 
-    <main class="container">
+let ratings = [];
 
-        <section class="intro">
-            <span class="eyebrow">COMER, DESCOBRIR, COMPARTILHAR</span>
-            <h1>Lugares que<br>merecem ser <em>descobertos.</em></h1>
-            <p>Uma coleção de lugares especiais compartilhados entre amigos.</p>
-        </section>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyVIEwxyOiyGOI9z1ygKAmKl8aFby4XegtulavxaLpgq9pSrub3vCnHLFxZb1waiIyt1A/exec';
+const SENHA_APP = '@m3lh0rGUI4'; // a mesma do Apps Script
 
-        <section class="explore">
+async function carregarDados() {
+  const res = await fetch(API_URL);
+  const dados = await res.json();
+  restaurants = dados.lugares;
+  ratings = dados.avaliacoes;
+}
 
-            <div class="section-heading">
-                <div>
-                    <span class="eyebrow">NOSSA COLEÇÃO</span>
-                    <h2>Explorar lugares</h2>
-                </div>
-                <span id="total-count" class="count">0 lugares</span>
-            </div>
-
-            <div class="search-box">
-                <span>⌕</span>
-                <input
-                    type="search"
-                    id="search"
-                    placeholder="Buscar por nome ou cidade..."
-                >
-            </div>
-
-            <div class="filters" id="filters">
-                <button class="filter active" data-category="Todos">Todos</button>
-                <button class="filter" data-category="Restaurante">Restaurantes</button>
-                <button class="filter" data-category="Cafeteria">Cafeterias</button>
-                <button class="filter" data-category="Bar">Bares</button>
-                <button class="filter" data-category="Outros">Outros</button>
-            </div>
-
-            <div class="restaurant-grid" id="restaurant-list"></div>
-
-            <div class="empty-state" id="empty-state" hidden>
-                <span>✳</span>
-                <h3>Nenhum lugar encontrado</h3>
-                <p>Tente outra busca ou adicione um novo estabelecimento.</p>
-            </div>
-
-        </section>
-
-        <section class="add-section">
-            <div>
-                <span class="eyebrow">CONHECE UM LUGAR LEGAL?</span>
-                <h2>Compartilhe com a gente.</h2>
-                <p>Ajude a aumentar nossa coleção de descobertas.</p>
-            </div>
-            <button class="add-button" id="open-form">
-                + Adicionar lugar
-            </button>
-        </section>
-
-    </main>
-
-    <footer>
-        <span class="logo">guia<span>-gdm</span></span>
-        <p>Feito para compartilhar boas descobertas.</p>
-    </footer>
-
-    <div class="modal" id="modal" hidden>
-        <div class="modal-content">
-            <button class="close-modal" id="close-form">×</button>
-
-            <span class="eyebrow">NOVA DESCOBERTA</span>
-            <h2>Adicionar lugar</h2>
-            <p>Compartilhe um estabelecimento com os amigos.</p>
-
-            
-
-    <form id="restaurant-form">
-
-        <span class="form-section-title">IDENTIFICAÇÃO</span>
-
-        <label for="name">Nome do estabelecimento *</label>
-        <input id="name" name="name" required
-            placeholder="Ex.: Café Aurora">
-
-        <div class="form-row">
-            <div>
-                <label for="city">Cidade *</label>
-                <input id="city" name="city" required
-                    placeholder="Sorocaba">
-            </div>
-            <div>
-                <label for="state">Estado *</label>
-                <input id="state" name="state" required
-                    placeholder="SP" maxlength="2">
-            </div>
-        </div>
-
-        <label for="category">Categoria *</label>
-        <select id="category" name="category" required>
-            <option value="">Selecione</option>
-            <option>Restaurante</option>
-            <option>Cafeteria</option>
-            <option>Bar</option>
-            <option>Outros</option>
-        </select>
-
-        <label for="cuisine">Tipo de culinária</label>
-        <input id="cuisine" name="cuisine"
-            placeholder="Ex.: Italiana, japonesa, brasileira...">
-
-        <label for="price">Faixa de preço *</label>
-        <select id="price" name="price" required>
-            <option value="">Selecione</option>
-            <option value="$">$ — Econômico</option>
-            <option value="$$">$$ — Moderado</option>
-            <option value="$$$">$$$ — Mais caro</option>
-            <option value="$$$$">$$$$ — Alto padrão</option>
-        </select>
-
-        <span class="form-section-title">LOCALIZAÇÃO</span>
-
-        <label for="instagram">Instagram</label>
-        <input id="instagram" name="instagram"
-            placeholder="@restaurante">
-
-        <span class="form-section-title">EXPERIÊNCIA GASTRONÔMICA</span>
-
-        <label for="experience">Conte sobre o estabelecimento</label>
-        <textarea id="experience" name="experience"
-            placeholder="Conte sobre o ambiente, cardápio, pratos que valem a pena experimentar, atendimento e sua experiência..."
-            rows="5"></textarea>
-
-        <span class="form-section-title">SUA AVALIAÇÃO</span>
-
-        <p class="rating-instructions">
-            Deslize o controle para atribuir uma nota de 0 a 5.
-            Você pode usar valores intermediários.
-        </p>
+async function enviarAoSheets(lugar, avaliacao) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      senha: SENHA_APP,
+      acao: 'adicionarLugar',
+      lugar,
+      avaliacao
+    })
+  });
+  const resultado = await res.json();
+  if (resultado.erro) throw new Error(resultado.erro);
+}
 
 
-        <div class="rating-control" data-rating-control>
-            <label for="rating-food">Comida / produtos</label>
-            <div class="rating-line">
-                <div class="rating-stars-wrap">
-                    <span class="rating-stars">★★★★★</span>
-                    <input id="rating-food" name="ratingFood"
-                        type="range" min="0" max="5" step="0.1" value="0"
-                        aria-label="Nota para comida e produtos">
-                </div>
-                <span class="rating-value">Não avaliado</span>
-            </div>
-        </div>
+// 2. ELEMENTOS DA PÁGINA
 
-        <div class="rating-control" data-rating-control>
-            <label for="rating-service">Atendimento</label>
-            <div class="rating-line">
-                <div class="rating-stars-wrap">
-                    <span class="rating-stars">★★★★★</span>
-                    <input id="rating-service" name="ratingService"
-                        type="range" min="0" max="5" step="0.1" value="0"
-                        aria-label="Nota para atendimento">
-                </div>
-                <span class="rating-value">Não avaliado</span>
-            </div>
-        </div>
+const restaurantList = document.getElementById("restaurant-list");
+const searchInput = document.getElementById("search");
+const filters = document.getElementById("filters");
+const totalCount = document.getElementById("total-count");
+const emptyState = document.getElementById("empty-state");
 
-        <div class="rating-control" data-rating-control>
-            <label for="rating-ambience">Ambiente</label>
-            <div class="rating-line">
-                <div class="rating-stars-wrap">
-                    <span class="rating-stars">★★★★★</span>
-                    <input id="rating-ambience" name="ratingAmbience"
-                        type="range" min="0" max="5" step="0.1" value="0"
-                        aria-label="Nota para ambiente">
-                </div>
-                <span class="rating-value">Não avaliado</span>
-            </div>
-        </div>
+const modal = document.getElementById("modal");
+const openFormButton = document.getElementById("open-form");
+const closeFormButton = document.getElementById("close-form");
+const restaurantForm = document.getElementById("restaurant-form");
 
-        <div class="rating-control" data-rating-control>
-            <label for="rating-value">Custo-benefício</label>
-            <div class="rating-line">
-                <div class="rating-stars-wrap">
-                    <span class="rating-stars">★★★★★</span>
-                    <input id="rating-value" name="ratingValue"
-                        type="range" min="0" max="5" step="0.1" value="0"
-                        aria-label="Nota para custo-benefício">
-                </div>
-                <span class="rating-value">Não avaliado</span>
-            </div>
-        </div>
+// 3. FILTRO ATUAL
 
-        <div class="rating-control" data-rating-control>
-            <label for="rating-overall">Experiência geral</label>
-            <div class="rating-line">
-                <div class="rating-stars-wrap">
-                    <span class="rating-stars">★★★★★</span>
-                    <input id="rating-overall" name="ratingOverall"
-                        type="range" min="0" max="5" step="0.1" value="0"
-                        aria-label="Nota para experiência geral">
-                </div>
-                <span class="rating-value">Não avaliado</span>
-            </div>
-        </div>
+let selectedCategory = "Todos";
 
-        <span class="form-section-title">INDICAÇÃO</span>
+// 4. MOSTRAR RESTAURANTES NA TELA
 
-        <label for="contributor">Quem está indicando?</label>
-        <input id="contributor" name="contributor"
-            placeholder="Seu nome">
+function renderRestaurants() {
 
-        <button type="submit" class="submit-button">
-            Adicionar ao guia
-        </button>
+    const searchTerm = searchInput.value.toLowerCase().trim();
 
-    </form>
+    const filteredRestaurants = restaurants.filter(restaurant => {
 
+        const matchesSearch =
+            restaurant.name.toLowerCase().includes(searchTerm) ||
+            restaurant.city.toLowerCase().includes(searchTerm);
 
-        </div>
-    </div>
+        const matchesCategory =
+            selectedCategory === "Todos" ||
+            restaurant.category === selectedCategory;
 
-    <!-- FICHA INDIVIDUAL DO ESTABELECIMENTO -->
+        return matchesSearch && matchesCategory;
+    });
 
-    
+    restaurantList.replaceChildren();
 
-    <div class="modal" id="detail-modal" hidden>
-        <div class="modal-content detail-content">
+    totalCount.textContent =
+        `${filteredRestaurants.length} ${filteredRestaurants.length === 1 ? "lugar" : "lugares"}`;
 
-            <button class="close-modal" id="close-detail">×</button>
+    emptyState.hidden = filteredRestaurants.length !== 0;
 
-            <span class="eyebrow" id="detail-category"></span>
+    filteredRestaurants.forEach(restaurant => {
 
-            <h2 id="detail-name"></h2>
-            <p id="detail-city"></p>
+        const card = document.createElement("article");
+        card.className = "restaurant-card";
 
-            <div id="detail-main-photo"></div>
+        const category = document.createElement("span");
+        category.className = "card-category";
+        category.textContent = restaurant.category;
 
-            <div class="detail-divider"></div>
+        const name = document.createElement("h3");
+        name.textContent = restaurant.name;
 
-            <div class="detail-information">
-                <span class="detail-label">CULINÁRIA</span>
-                <p id="detail-cuisine"></p>
-            </div>
+        const city = document.createElement("p");
+        city.className = "card-city";
+        city.textContent = restaurant.city;
 
-            <div class="detail-information">
-                <span class="detail-label">FAIXA DE PREÇO</span>
-                <p id="detail-price"></p>
-            </div>
+        const price = document.createElement("div");
+        price.className = "card-price";
+        price.textContent = restaurant.price;
 
-            <div class="detail-information">
-                <span class="detail-label">EXPERIÊNCIA GASTRONÔMICA</span>
-                <p id="detail-experience"></p>
-            </div>
+        card.append(category, name, city, price);
 
-            <div class="detail-divider"></div>
+        restaurantList.appendChild(card);
+    });
+}
 
-            <div class="detail-information">
-                <span class="detail-label">LOCALIZAÇÃO</span>
-                <p id="detail-address"></p>
-                <a id="detail-maps" target="_blank"
-                    rel="noopener noreferrer">
-                    Abrir no Google Maps ↗
-                </a>
-            </div>
+// CONTROLES DE AVALIAÇÃO SOBRE AS ESTRELAS
 
-            <div class="detail-information">
-                <span class="detail-label">INSTAGRAM</span>
-                <a id="detail-instagram" target="_blank"
-                    rel="noopener noreferrer"></a>
-            </div>
+    document.querySelectorAll("[data-rating-control]").forEach(control => {
 
-            <div class="detail-divider"></div>
+        const slider = control.querySelector('input[type="range"]');
+        const stars = control.querySelector(".rating-stars");
+        const value = control.querySelector(".rating-value");
 
-            <div class="detail-information">
-                <span class="detail-label">AVALIAÇÕES DOS AMIGOS</span>
-                <div id="detail-ratings"></div>
-            </div>
+        stars.replaceChildren();
 
-            <button class="submit-button" id="back-to-list">
-                Voltar para os lugares
-            </button>
+        // Cria as cinco estrelas
+        for (let i = 0; i < 5; i++) {
 
-        </div>
-    </div>
+            const star = document.createElement("span");
+            star.className = "rating-star";
+            star.textContent = "★";
+
+            const fill = document.createElement("span");
+            fill.className = "rating-star-fill";
+            fill.textContent = "★";
+
+            star.appendChild(fill);
+            stars.appendChild(star);
+        }
+
+        function updateRating() {
+
+            const score = Number(slider.value);
+
+            slider.dataset.touched = "true";
+
+            const individualStars =
+                stars.querySelectorAll(".rating-star-fill");
+
+            individualStars.forEach((star, index) => {
+
+                const fraction = Math.max(
+                    0,
+                    Math.min(1, score - index)
+                );
+
+                const margem = 7;
+                const areaVisivel = 86;
+
+                const recorteDireito =
+                    100 - margem - (fraction * areaVisivel);
+
+                star.style.clipPath =
+                    `inset(0 ${recorteDireito}% 0 ${margem}%)`;
+
+            });
+
+            value.textContent =
+                score.toFixed(1).replace(".", ",") + " / 5";
+        }
+
+        slider.addEventListener("input", updateRating);
+
+        updateRating();
+
+    });
 
 
 
-    <script src="script.js"></script>
-</body>
-</html>
+// 5. PESQUISA
+
+searchInput.addEventListener("input", renderRestaurants);
+
+// 6. FILTROS DE CATEGORIA
+
+filters.addEventListener("click", event => {
+
+    const button = event.target.closest(".filter");
+
+    if (!button) return;
+
+    selectedCategory = button.dataset.category;
+
+    document.querySelectorAll(".filter").forEach(filter => {
+        filter.classList.remove("active");
+    });
+
+    button.classList.add("active");
+
+    renderRestaurants();
+});
+
+// 7. ABRIR E FECHAR O FORMULÁRIO
+
+openFormButton.addEventListener("click", () => {
+    modal.hidden = false;
+    document.getElementById("name").focus();
+});
+
+closeFormButton.addEventListener("click", closeModal);
+
+function closeModal() {
+    modal.hidden = true;
+}
+
+modal.addEventListener("click", event => {
+    if (event.target === modal) {
+        closeModal();
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        closeModal();
+    }
+});
+
+
+function gerarLinkMaps(nome, cidade, estado) {
+    const pesquisa = `${nome}, ${cidade}, ${estado}`;
+
+    return "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(pesquisa);
+}
+
+// 8. CADASTRAR UM NOVO ESTABELECIMENTO E SUA AVALIAÇÃO
+
+restaurantForm.addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    const form = restaurantForm.elements;
+
+    const restaurantId = crypto.randomUUID();
+
+    const newRestaurant = {
+
+        id: restaurantId,
+
+        name: form.name.value.trim(),
+        city: form.city.value.trim(),
+        state: form.state.value.trim().toUpperCase(),
+
+        category: form.category.value,
+        cuisine: form.cuisine.value.trim(),
+        price: form.price.value,
+
+        maps: gerarLinkMaps(form.name.value.trim(), form.city.value.trim(), form.state.value.trim().toUpperCase()),
+        instagram: form.instagram.value.trim(),
+
+        experience: form.experience.value.trim(),
+
+        mainPhoto: "",
+
+        createdAt: new Date().toISOString()
+
+    };
+
+    // Captura as notas preenchidas
+
+    const newRating = {
+
+        id: crypto.randomUUID(),
+        restaurantId: restaurantId,
+
+        contributor: form.contributor.value.trim(),
+
+        food: form.ratingFood.dataset.touched
+            ? Number(form.ratingFood.value) : null,
+
+        service: form.ratingService.dataset.touched
+            ? Number(form.ratingService.value) : null,
+
+        ambience: form.ratingAmbience.dataset.touched
+            ? Number(form.ratingAmbience.value) : null,
+
+        value: form.ratingValue.dataset.touched
+            ? Number(form.ratingValue.value) : null,
+
+        overall: form.ratingOverall.dataset.touched
+            ? Number(form.ratingOverall.value) : null,
+
+        createdAt: new Date().toISOString()
+
+    };
+
+    restaurants.push(newRestaurant);
+
+    const hasRating = [
+        newRating.food,
+        newRating.service,
+        newRating.ambience,
+        newRating.value,
+        newRating.overall
+    ].some(score => score !== null);
+
+    if (hasRating || newRating.contributor) {
+        ratings.push(newRating);
+    }
+
+        try {
+        await enviarAoSheets(
+            newRestaurant,
+            (hasRating || newRating.contributor) ? newRating : null
+        );
+    } catch (erro) {
+        alert("Não foi possível salvar: " + erro.message);
+        return;
+    }
+
+
+    restaurantForm.reset();
+
+    // Limpa o estado dos controles deslizantes
+
+    document.querySelectorAll("[data-rating-control]").forEach(control => {
+
+        const slider = control.querySelector('input[type="range"]');
+        const stars = control.querySelector(".rating-stars");
+        const value = control.querySelector(".rating-value");
+
+        delete slider.dataset.touched;
+
+        stars.style.backgroundImage = "";
+        value.textContent = "Não avaliado";
+
+    });
+
+    closeModal();
+
+    selectedCategory = "Todos";
+    searchInput.value = "";
+
+    document.querySelectorAll(".filter").forEach(filter => {
+
+        filter.classList.toggle(
+            "active",
+            filter.dataset.category === "Todos"
+        );
+
+    });
+
+});
+
+
+
+// 9. ELEMENTOS DA FICHA INDIVIDUAL
+
+const detailModal = document.getElementById("detail-modal");
+
+const closeDetailButton = document.getElementById("close-detail");
+
+const backToListButton = document.getElementById("back-to-list");
+
+
+// 10. FUNÇÕES AUXILIARES
+
+function validUrl(value) {
+    try {
+        const url = new URL(value);
+
+        if (url.protocol === "http:" || url.protocol === "https:") {
+            return url.href;
+        }
+
+        return "";
+    } catch {
+        return "";
+    }
+}
+
+function setDetailText(id, value) {
+    document.getElementById(id).textContent =
+        value || "Não informado";
+}
+
+function setDetailLink(id, value, label, hideIfEmpty = true) {
+
+    const element = document.getElementById(id);
+    const url = validUrl(value);
+
+    if (!url) {
+        element.hidden = true;
+        element.removeAttribute("href");
+        return;
+    }
+
+    element.href = url;
+    element.textContent = label;
+    element.hidden = false;
+}
+
+
+// 11. ABRIR A FICHA DO ESTABELECIMENTO
+
+restaurantList.addEventListener("click", event => {
+
+    const card = event.target.closest(".restaurant-card");
+
+    if (!card) return;
+
+    const index = Array.from(restaurantList.children).indexOf(card);
+
+    const searchTerm = searchInput.value.toLowerCase().trim();
+
+    const filteredRestaurants = restaurants.filter(restaurant => {
+
+        const matchesSearch =
+            restaurant.name.toLowerCase().includes(searchTerm) ||
+            restaurant.city.toLowerCase().includes(searchTerm);
+
+        const matchesCategory =
+            selectedCategory === "Todos" ||
+            restaurant.category === selectedCategory;
+
+        return matchesSearch && matchesCategory;
+    });
+
+    const restaurant = filteredRestaurants[index];
+
+    if (!restaurant) return;
+
+    // IDENTIFICAÇÃO
+
+    setDetailText("detail-category", restaurant.category);
+
+    setDetailText("detail-name", restaurant.name);
+
+    setDetailText(
+        "detail-city",
+        `${restaurant.city}${restaurant.state ? " - " + restaurant.state : ""}`
+    );
+
+    setDetailText("detail-cuisine", restaurant.cuisine);
+
+    setDetailText("detail-price", restaurant.price);
+
+    // EXPERIÊNCIA GASTRONÔMICA
+
+    setDetailText(
+        "detail-experience",
+        restaurant.experience || restaurant.description
+    );
+
+    // LOCALIZAÇÃO
+
+    const address = [
+        restaurant.address,
+        restaurant.neighborhood
+    ].filter(Boolean).join(" - ");
+
+    setDetailText("detail-address", address);
+
+    // GOOGLE MAPS
+
+    setDetailLink(
+        "detail-maps",
+        restaurant.maps,
+        "Abrir no Google Maps ↗"
+    );
+
+    // INSTAGRAM
+
+    let instagramUrl = restaurant.instagram || "";
+
+    if (instagramUrl && !instagramUrl.startsWith("http")) {
+        instagramUrl = "https://www.instagram.com/" +
+            instagramUrl.replace(/^@/, "");
+    }
+
+    setDetailLink(
+        "detail-instagram",
+        instagramUrl,
+        "Visitar Instagram ↗"
+    );
+
+    // FOTO PRINCIPAL
+
+    const mainPhoto = document.getElementById("detail-main-photo");
+
+    mainPhoto.replaceChildren();
+
+    const mainPhotoUrl = validUrl(restaurant.mainPhoto || "");
+
+    if (mainPhotoUrl) {
+
+        const image = document.createElement("img");
+
+        image.src = mainPhotoUrl;
+        image.alt = `Foto de ${restaurant.name}`;
+
+        mainPhoto.appendChild(image);
+
+    }
+
+    // AVALIAÇÕES DOS AMIGOS
+
+    renderRatings(restaurant.id);
+
+    // ABRIR FICHA
+
+    detailModal.hidden = false;
+
+});
+
+
+// 12. FECHAR A FICHA
+
+function closeDetail() {
+    detailModal.hidden = true;
+}
+
+closeDetailButton.addEventListener("click", closeDetail);
+
+backToListButton.addEventListener("click", closeDetail);
+
+detailModal.addEventListener("click", event => {
+
+    if (event.target === detailModal) {
+        closeDetail();
+    }
+});
+
+
+// 9. INICIAR O APLICATIVO
+
+renderRestaurants();
+
+
+// EXIBIR AS AVALIAÇÕES NA FICHA
+
+function renderRatings(restaurantId) {
+
+    const container = document.getElementById("detail-ratings");
+
+    container.replaceChildren();
+
+    const restaurantRatings = ratings.filter(
+        rating => rating.restaurantId === restaurantId
+    );
+
+    if (restaurantRatings.length === 0) {
+
+        const message = document.createElement("p");
+        message.textContent = "Ainda não há avaliações.";
+        container.appendChild(message);
+
+        return;
+
+    }
+
+    const criteria = [
+        { key: "food", label: "Comida / produtos" },
+        { key: "service", label: "Atendimento" },
+        { key: "ambience", label: "Ambiente" },
+        { key: "value", label: "Custo-benefício" },
+        { key: "overall", label: "Experiência geral" }
+    ];
+
+    const allScores = [];
+
+    criteria.forEach(criterion => {
+
+        const scores = restaurantRatings
+            .map(rating => rating[criterion.key])
+            .filter(score => score !== null && score !== undefined);
+
+        if (scores.length === 0) return;
+
+        const average = scores.reduce((sum, score) => sum + score, 0)
+            / scores.length;
+
+        allScores.push(...scores);
+
+        const row = document.createElement("div");
+        row.className = "detail-rating-row";
+
+        const label = document.createElement("span");
+        label.textContent = criterion.label;
+
+        const score = document.createElement("strong");
+        score.textContent = average.toFixed(1).replace(".", ",") + " / 5";
+
+        row.append(label, score);
+        container.appendChild(row);
+
+    });
+
+    const count = document.createElement("p");
+    count.className = "rating-total";
+    count.textContent = restaurantRatings.length +
+        (restaurantRatings.length === 1
+            ? " avaliação registrada"
+            : " avaliações registradas");
+
+    container.prepend(count);
+
+    if (allScores.length > 0) {
+
+        const average = allScores.reduce((sum, score) => sum + score, 0)
+            / allScores.length;
+
+        const general = document.createElement("div");
+        general.className = "detail-rating-average";
+
+        const number = document.createElement("strong");
+        number.textContent = average.toFixed(1).replace(".", ",");
+
+        const description = document.createElement("span");
+        description.textContent = "Média geral das notas";
+
+        general.append(number, description);
+        container.prepend(general);
+
+    }
+
+// Mostra quem indicou
+
+    restaurantRatings.forEach(rating => {
+
+        if (!rating.contributor) return;
+
+        const item = document.createElement("div");
+        item.className = "detail-review";
+
+        const name = document.createElement("strong");
+        name.textContent = rating.contributor;
+
+        item.appendChild(name);
+        container.appendChild(item);
+
+    });
+
+}
+
+    carregarDados().then(renderRestaurants);
