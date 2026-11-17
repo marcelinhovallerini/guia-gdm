@@ -1,4 +1,3 @@
-
 // 1. NOSSA LISTA INICIAL DE RESTAURANTES
 
 let restaurants = [];
@@ -7,7 +6,6 @@ let ratings = [];
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyVIEwxyOiyGOI9z1ygKAmKl8aFby4XegtulavxaLpgq9pSrub3vCnHLFxZb1waiIyt1A/exec';
 const SENHA_APP = '@m3lh0rGUI4'; // a mesma do Apps Script
-
 
 async function carregarDados() {
     try {
@@ -29,7 +27,34 @@ async function carregarDados() {
             throw new Error("A API não retornou os dados esperados.");
         }
 
-        restaurants = dados.lugares;
+        restaurants = dados.lugares.map(lugar => {
+            let photos = lugar.photos || [];
+
+            // Compatibilidade com registros antigos que ainda não têm galeria.
+            if (typeof photos === "string") {
+                try {
+                    photos = JSON.parse(photos);
+                } catch {
+                    photos = [];
+                }
+            }
+
+            if (!Array.isArray(photos)) {
+                photos = [];
+            }
+
+            // Se o lugar antigo só tiver mainPhoto, ela será a primeira foto.
+            if (photos.length === 0 && lugar.mainPhoto) {
+                photos = [lugar.mainPhoto];
+            }
+
+            return {
+                ...lugar,
+                photos,
+                mainPhoto: lugar.mainPhoto || photos[0] || ""
+            };
+        });
+
         ratings = dados.avaliacoes;
 
         console.log("Restaurantes carregados:", restaurants.length);
@@ -45,19 +70,369 @@ async function carregarDados() {
 }
 
 
-async function enviarAoSheets(lugar, avaliacao) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      senha: SENHA_APP,
-      acao: 'adicionarLugar',
-      lugar,
-      avaliacao
-    })
-  });
-  const resultado = await res.json();
-  if (resultado.erro) throw new Error(resultado.erro);
+// Converte uma imagem em base64.
+function prepararImagem(arquivo) {
+    return new Promise((resolve, reject) => {
+        const tiposPermitidos = [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
+
+        const tamanhoMaximo = 4 * 1024 * 1024; // 4 MB por foto
+
+        if (!tiposPermitidos.includes(arquivo.type)) {
+            reject(new Error(
+                `A imagem "${arquivo.name}" não é JPG, PNG ou WEBP.`
+            ));
+            return;
+        }
+
+        if (arquivo.size > tamanhoMaximo) {
+            reject(new Error(
+                `A imagem "${arquivo.name}" ultrapassa 4 MB.`
+            ));
+            return;
+        }
+
+        const leitor = new FileReader();
+
+        leitor.onload = () => {
+            const base64 = String(leitor.result).split(",")[1];
+
+            resolve({
+                nome: arquivo.name,
+                mimeType: arquivo.type,
+                base64
+            });
+        };
+
+        leitor.onerror = () => {
+            reject(new Error(
+                `Não foi possível ler a imagem "${arquivo.name}".`
+            ));
+        };
+
+        leitor.readAsDataURL(arquivo);
+    });
+}
+
+
+// Prepara todas as imagens selecionadas.
+async function prepararImagens(arquivos) {
+    return Promise.all(
+        Array.from(arquivos).map(arquivo => prepararImagem(arquivo))
+    );
+}
+
+
+// Envia o estabelecimento, a avaliação e todas as imagens.
+async function enviarAoSheets(lugar, avaliacao, imagens = []) {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({
+            senha: SENHA_APP,
+            acao: "adicionarLugar",
+            lugar,
+            avaliacao,
+            imagens
+        })
+    });
+
+    const resultado = await res.json();
+
+    if (!res.ok || resultado.erro || resultado.ok === false) {
+        throw new Error(resultado.erro || "Erro ao salvar o estabelecimento.");
+    }
+
+    lugar.photos = Array.isArray(resultado.photos)
+        ? resultado.photos
+        : [];
+
+    lugar.mainPhoto = resultado.mainPhoto || lugar.photos[0] || "";
+}
+
+async function enviarAcao(dados) {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({
+            senha: SENHA_APP,
+            ...dados
+        })
+    });
+
+    const resultado = await res.json();
+
+    if (!res.ok || resultado.erro || resultado.ok === false) {
+        throw new Error(
+            resultado.erro || "Não foi possível executar a operação."
+        );
+    }
+
+    return resultado;
+}
+
+// Envia ações ao Google Apps Script.
+async function enviarAcao(dados) {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({
+            senha: SENHA_APP,
+            ...dados
+        })
+    });
+
+    const resultado = await res.json();
+
+    if (!res.ok || resultado.erro || resultado.ok === false) {
+        throw new Error(
+            resultado.erro || "Não foi possível executar a operação."
+        );
+    }
+
+    return resultado;
+}
+
+
+// Define uma foto como principal.
+async function definirFotoPrincipal(restaurant, photoUrl) {
+    const resposta = await enviarAcao({
+        acao: "definirFotoPrincipal",
+        restaurantId: restaurant.id,
+        photoUrl: photoUrl
+    });
+
+    restaurant.mainPhoto = resposta.mainPhoto || photoUrl;
+
+    renderRestaurants();
+    renderDetailGallery(restaurant);
+}
+
+
+// Adiciona fotos a um estabelecimento existente.
+async function adicionarFotosAoSheets(restaurant, imagens) {
+    const resposta = await enviarAcao({
+        acao: "adicionarFotos",
+        restaurantId: restaurant.id,
+        imagens: imagens
+    });
+
+    restaurant.photos = resposta.photos || restaurant.photos;
+    restaurant.mainPhoto = resposta.mainPhoto || restaurant.mainPhoto;
+
+    renderRestaurants();
+    renderDetailGallery(restaurant);
+}
+
+// Controle da foto selecionada na galeria
+let selectedPhotoUrl = "";
+
+function renderDetailGallery(restaurant) {
+    const gallery = document.getElementById("detail-gallery");
+    const mainPhoto = document.getElementById("detail-main-photo");
+    const thumbnails = document.getElementById("detail-photo-thumbnails");
+
+    mainPhoto.replaceChildren();
+    thumbnails.replaceChildren();
+
+    gallery.querySelector(".set-main-photo")?.remove();
+    gallery.querySelector(".add-photos-control")?.remove();
+
+    selectedPhotoUrl = "";
+
+    let photos = Array.isArray(restaurant.photos)
+        ? restaurant.photos
+        : [];
+
+    photos = [
+        ...new Set(
+            photos.map(photo => validUrl(photo)).filter(Boolean)
+        )
+    ];
+
+    const currentMain =
+        validUrl(restaurant.mainPhoto) || photos[0] || "";
+
+    if (currentMain && !photos.includes(currentMain)) {
+        photos.unshift(currentMain);
+    }
+
+    restaurant.photos = photos;
+
+    if (!currentMain) {
+        mainPhoto.textContent = "Foto não disponível";
+        mainPhoto.classList.add("no-photo");
+    } else {
+        mainPhoto.classList.remove("no-photo");
+
+        const mainImage = document.createElement("img");
+        mainImage.src = currentMain;
+        mainImage.alt = `Foto principal de ${restaurant.name}`;
+
+        mainPhoto.appendChild(mainImage);
+    }
+
+    // Exibe as demais fotos.
+    const otherPhotos = photos.filter(
+        photo => photo !== currentMain
+    );
+
+    otherPhotos.forEach((photoUrl, index) => {
+        const item = document.createElement("div");
+        item.className = "detail-photo-item";
+
+        const image = document.createElement("img");
+        image.src = photoUrl;
+        image.alt = `Selecionar foto ${index + 1} de ${restaurant.name}`;
+        image.loading = "lazy";
+        image.tabIndex = 0;
+        image.setAttribute("role", "button");
+
+        function selectPhoto() {
+            selectedPhotoUrl = photoUrl;
+
+            thumbnails.querySelectorAll(".detail-photo-item")
+                .forEach(element => {
+                    element.classList.remove("selected");
+                });
+
+            item.classList.add("selected");
+
+            confirmButton.disabled = false;
+            confirmButton.textContent = "Definir como principal";
+        }
+
+        image.addEventListener("click", selectPhoto);
+
+        image.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                selectPhoto();
+            }
+        });
+
+        item.appendChild(image);
+        thumbnails.appendChild(item);
+    });
+
+    // Botão para definir a foto principal.
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "set-main-photo";
+    confirmButton.textContent = "Selecione uma foto";
+    confirmButton.disabled = true;
+
+    confirmButton.addEventListener("click", async () => {
+        if (!selectedPhotoUrl) return;
+
+        confirmButton.disabled = true;
+        confirmButton.textContent = "Salvando...";
+
+        try {
+            await definirFotoPrincipal(
+                restaurant,
+                selectedPhotoUrl
+            );
+        } catch (erro) {
+            alert(erro.message);
+            confirmButton.disabled = false;
+            confirmButton.textContent = "Definir como principal";
+        }
+    });
+
+    gallery.appendChild(confirmButton);
+
+    // ÁREA PARA ADICIONAR NOVAS FOTOS.
+    const addControl = document.createElement("div");
+    addControl.className = "add-photos-control";
+
+    const remaining = Math.max(
+        0,
+        10 - photos.length
+    );
+
+    const description = document.createElement("p");
+    description.className = "add-photos-description";
+
+    if (remaining > 0) {
+        description.textContent =
+            `Você pode adicionar mais ${remaining} ${
+                remaining === 1 ? "foto" : "fotos"
+            }.`;
+    } else {
+        description.textContent =
+            "Este estabelecimento já atingiu o limite de 10 fotos.";
+    }
+
+    addControl.appendChild(description);
+
+    if (remaining > 0) {
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/jpeg,image/png,image/webp";
+        fileInput.multiple = true;
+        fileInput.className = "add-photos-input";
+        fileInput.hidden = true;
+
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "add-photos-button";
+        addButton.textContent = "+ Adicionar fotos";
+
+        addButton.addEventListener("click", () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener("change", async () => {
+            const arquivos = Array.from(fileInput.files || []);
+
+            if (arquivos.length === 0) return;
+
+            if (arquivos.length > remaining) {
+                alert(
+                    `Você pode adicionar no máximo mais ${remaining} ${
+                        remaining === 1 ? "foto" : "fotos"
+                    }.`
+                );
+
+                fileInput.value = "";
+                return;
+            }
+
+            addButton.disabled = true;
+            addButton.textContent = "Preparando fotos...";
+
+            try {
+                const imagens = await prepararImagens(arquivos);
+
+                addButton.textContent = "Enviando fotos...";
+
+                await adicionarFotosAoSheets(
+                    restaurant,
+                    imagens
+                );
+
+            } catch (erro) {
+                alert("Não foi possível adicionar as fotos: " + erro.message);
+
+                addButton.disabled = false;
+                addButton.textContent = "+ Adicionar fotos";
+            }
+        });
+
+        addControl.append(fileInput, addButton);
+    }
+
+    gallery.appendChild(addControl);
 }
 
 
@@ -109,6 +484,28 @@ function renderRestaurants() {
         const card = document.createElement("article");
         card.className = "restaurant-card";
 
+        
+        // FOTO DO ESTABELECIMENTO
+        const photo = document.createElement("div");
+        photo.className = "card-photo";
+
+        const photoUrl = validUrl(restaurant.mainPhoto || "");
+
+        if (photoUrl) {
+            const image = document.createElement("img");
+            image.src = photoUrl;
+            image.alt = `Foto de ${restaurant.name}`;
+            image.loading = "lazy";
+            photo.appendChild(image);
+        } else {
+            photo.classList.add("no-photo");
+            photo.textContent = "Foto não disponível";
+        }
+
+        // INFORMAÇÕES
+        const info = document.createElement("div");
+        info.className = "card-info";
+
         const category = document.createElement("span");
         category.className = "card-category";
         category.textContent = restaurant.category;
@@ -124,7 +521,44 @@ function renderRestaurants() {
         price.className = "card-price";
         price.textContent = restaurant.price;
 
-        card.append(category, name, city, price);
+        // MÉDIA DAS AVALIAÇÕES
+        const averageElement = document.createElement("div");
+        averageElement.className = "card-average";
+
+        const restaurantRatings = ratings.filter(
+            rating => rating.restaurantId === restaurant.id
+        );
+
+        const criteria = ["food", "service", "ambience", "value", "overall"];
+
+        const scores = restaurantRatings.flatMap(rating =>
+            criteria
+                .map(key => rating[key])
+                .filter(score =>
+                    score !== null &&
+                    score !== undefined &&
+                    score !== "" &&
+                    Number.isFinite(Number(score))
+                )
+                .map(Number)
+        );
+
+        if (scores.length > 0) {
+            const average = scores.reduce((sum, score) => sum + score, 0)
+                / scores.length;
+
+            averageElement.innerHTML = `
+                <span class="card-star">★</span>
+                <strong>${average.toFixed(2).replace(".", ",")}</strong>
+                <span>/ 5</span>
+            `;
+        } else {
+            averageElement.textContent = "Sem avaliações";
+        }
+
+        info.append(category, name, city, price, averageElement);
+        card.append(photo, info);
+
 
         restaurantList.appendChild(card);
     });
@@ -278,6 +712,7 @@ restaurantForm.addEventListener("submit", async event => {
         experience: form.experience.value.trim(),
 
         mainPhoto: "",
+        photos: [],
 
         createdAt: new Date().toISOString()
 
@@ -311,8 +746,6 @@ restaurantForm.addEventListener("submit", async event => {
 
     };
 
-    restaurants.push(newRestaurant);
-
     const hasRating = [
         newRating.food,
         newRating.service,
@@ -321,15 +754,35 @@ restaurantForm.addEventListener("submit", async event => {
         newRating.overall
     ].some(score => score !== null);
 
-    if (hasRating || newRating.contributor) {
-        ratings.push(newRating);
+    const campoFotos = restaurantForm.querySelector("#photos");
+
+    const arquivosSelecionados = campoFotos && campoFotos.files
+        ? campoFotos.files
+        : [];
+    
+    if (arquivosSelecionados.length > 10) {
+    alert("Você pode selecionar no máximo 10 fotos por estabelecimento.");
+    return;
     }
 
-        try {
+    try {
+        const imagens = await prepararImagens(arquivosSelecionados);
+
         await enviarAoSheets(
             newRestaurant,
-            (hasRating || newRating.contributor) ? newRating : null
+            (hasRating || newRating.contributor) ? newRating : null,
+            imagens
         );
+
+        // Só adiciona à tela depois de confirmar o salvamento.
+        restaurants.push(newRestaurant);
+
+        if (hasRating || newRating.contributor) {
+            ratings.push(newRating);
+        }
+
+        renderRestaurants();
+
     } catch (erro) {
         alert("Não foi possível salvar: " + erro.message);
         return;
@@ -503,22 +956,7 @@ restaurantList.addEventListener("click", event => {
 
     // FOTO PRINCIPAL
 
-    const mainPhoto = document.getElementById("detail-main-photo");
-
-    mainPhoto.replaceChildren();
-
-    const mainPhotoUrl = validUrl(restaurant.mainPhoto || "");
-
-    if (mainPhotoUrl) {
-
-        const image = document.createElement("img");
-
-        image.src = mainPhotoUrl;
-        image.alt = `Foto de ${restaurant.name}`;
-
-        mainPhoto.appendChild(image);
-
-    }
+    renderDetailGallery(restaurant);
 
     // AVALIAÇÕES DOS AMIGOS
 
@@ -557,24 +995,12 @@ renderRestaurants();
 // EXIBIR AS AVALIAÇÕES NA FICHA
 
 function renderRatings(restaurantId) {
-
     const container = document.getElementById("detail-ratings");
-
     container.replaceChildren();
 
     const restaurantRatings = ratings.filter(
-        rating => rating.restaurantId === restaurantId
+        rating => String(rating.restaurantId) === String(restaurantId)
     );
-
-    if (restaurantRatings.length === 0) {
-
-        const message = document.createElement("p");
-        message.textContent = "Ainda não há avaliações.";
-        container.appendChild(message);
-
-        return;
-
-    }
 
     const criteria = [
         { key: "food", label: "Comida / produtos" },
@@ -584,80 +1010,271 @@ function renderRatings(restaurantId) {
         { key: "overall", label: "Experiência geral" }
     ];
 
-    const allScores = [];
+    // MÉDIAS GERAIS
+    if (restaurantRatings.length > 0) {
+        const allScores = [];
 
-    criteria.forEach(criterion => {
+        criteria.forEach(criterion => {
+            const scores = restaurantRatings
+                .map(rating => rating[criterion.key])
+                .filter(score =>
+                    score !== null &&
+                    score !== undefined &&
+                    score !== "" &&
+                    Number.isFinite(Number(score))
+                )
+                .map(Number);
 
-        const scores = restaurantRatings
-            .map(rating => rating[criterion.key])
-            .filter(score => score !== null && score !== undefined);
+            if (scores.length === 0) return;
 
-        if (scores.length === 0) return;
+            allScores.push(...scores);
 
-        const average = scores.reduce((sum, score) => sum + score, 0)
-            / scores.length;
+            const average = scores.reduce((sum, score) => sum + score, 0)
+                / scores.length;
 
-        allScores.push(...scores);
+            const row = document.createElement("div");
+            row.className = "detail-rating-row";
 
-        const row = document.createElement("div");
-        row.className = "detail-rating-row";
+            const label = document.createElement("span");
+            label.textContent = criterion.label;
 
-        const label = document.createElement("span");
-        label.textContent = criterion.label;
+            const score = document.createElement("strong");
+            score.textContent = average.toFixed(2).replace(".", ",") + " / 5";
 
-        const score = document.createElement("strong");
-        score.textContent = average.toFixed(1).replace(".", ",") + " / 5";
+            row.append(label, score);
+            container.appendChild(row);
+        });
 
-        row.append(label, score);
-        container.appendChild(row);
+        if (allScores.length > 0) {
+            const average = allScores.reduce((sum, score) => sum + score, 0)
+                / allScores.length;
 
-    });
+            const general = document.createElement("div");
+            general.className = "detail-rating-average";
 
-    const count = document.createElement("p");
-    count.className = "rating-total";
-    count.textContent = restaurantRatings.length +
-        (restaurantRatings.length === 1
-            ? " avaliação registrada"
-            : " avaliações registradas");
+            const number = document.createElement("strong");
+            number.textContent = average.toFixed(2).replace(".", ",");
 
-    container.prepend(count);
+            const description = document.createElement("span");
+            description.textContent = "Média geral das notas";
 
-    if (allScores.length > 0) {
-
-        const average = allScores.reduce((sum, score) => sum + score, 0)
-            / allScores.length;
-
-        const general = document.createElement("div");
-        general.className = "detail-rating-average";
-
-        const number = document.createElement("strong");
-        number.textContent = average.toFixed(1).replace(".", ",");
-
-        const description = document.createElement("span");
-        description.textContent = "Média geral das notas";
-
-        general.append(number, description);
-        container.prepend(general);
-
+            general.append(number, description);
+            container.prepend(general);
+        }
     }
 
-// Mostra quem indicou
+    // HISTÓRICO DE AVALIAÇÕES
+    const historyTitle = document.createElement("h3");
+    historyTitle.className = "reviews-history-title";
+    historyTitle.textContent =
+        `Avaliações da comunidade (${restaurantRatings.length})`;
 
-    restaurantRatings.forEach(rating => {
+    container.appendChild(historyTitle);
 
-        if (!rating.contributor) return;
+    if (restaurantRatings.length === 0) {
+        const message = document.createElement("p");
+        message.textContent = "Ainda não há avaliações. Seja o primeiro a avaliar!";
+        container.appendChild(message);
+    }
 
-        const item = document.createElement("div");
+    const orderedRatings = [...restaurantRatings].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    orderedRatings.forEach(rating => {
+        const item = document.createElement("article");
         item.className = "detail-review";
 
+        const header = document.createElement("div");
+        header.className = "review-header";
+
         const name = document.createElement("strong");
-        name.textContent = rating.contributor;
+        name.textContent = rating.contributor || "Visitante";
 
-        item.appendChild(name);
+        const date = document.createElement("span");
+
+        if (rating.createdAt) {
+            const parsedDate = new Date(rating.createdAt);
+
+            date.textContent = Number.isNaN(parsedDate.getTime())
+                ? ""
+                : parsedDate.toLocaleDateString("pt-BR");
+        }
+
+        header.append(name, date);
+        item.appendChild(header);
+
+        const notes = document.createElement("div");
+        notes.className = "review-individual-notes";
+
+        criteria.forEach(criterion => {
+            const value = rating[criterion.key];
+
+            if (
+                value === null ||
+                value === undefined ||
+                value === ""
+            ) return;
+
+            const note = document.createElement("span");
+            note.textContent =
+                `${criterion.label}: ${Number(value).toFixed(1).replace(".", ",")}`;
+
+            notes.appendChild(note);
+        });
+
+        item.appendChild(notes);
+
+        if (rating.comment) {
+            const comment = document.createElement("p");
+            comment.className = "review-comment";
+            comment.textContent = rating.comment;
+            item.appendChild(comment);
+        }
+
         container.appendChild(item);
-
     });
 
+    // FORMULÁRIO PARA UMA NOVA AVALIAÇÃO
+    const form = document.createElement("form");
+    form.className = "new-review-form";
+
+    const formTitle = document.createElement("h3");
+    formTitle.textContent = "Compartilhe sua experiência";
+
+    const nameLabel = document.createElement("label");
+    nameLabel.textContent = "Seu nome";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.name = "contributor";
+    nameInput.placeholder = "Como gostaria de ser identificado?";
+    nameInput.maxLength = 80;
+    nameInput.required = true;
+
+    nameLabel.appendChild(nameInput);
+    form.appendChild(formTitle);
+    form.appendChild(nameLabel);
+
+    const ratingInputs = {};
+
+    // Cria as cinco avaliações por estrelas.
+    criteria.forEach(criterion => {
+        const control = document.createElement("div");
+        control.className = "new-review-rating";
+
+        const label = document.createElement("label");
+        label.textContent = criterion.label;
+
+        const starsArea = document.createElement("div");
+        starsArea.className = "new-review-stars-area";
+
+        const stars = document.createElement("span");
+        stars.className = "new-review-stars";
+        stars.textContent = "★★★★★";
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = "0";
+        slider.max = "5";
+        slider.step = "0.5";
+        slider.value = "0";
+        slider.setAttribute("aria-label", criterion.label);
+
+        const score = document.createElement("span");
+        score.className = "new-review-score";
+        score.textContent = "Não avaliado";
+
+        slider.addEventListener("input", () => {
+            const value = Number(slider.value);
+
+            slider.dataset.touched = "true";
+
+            stars.style.backgroundImage =
+                `linear-gradient(90deg, var(--wine) ${value * 20}%, var(--border) ${value * 20}%)`;
+
+            score.textContent =
+                value.toFixed(1).replace(".", ",") + " / 5";
+        });
+
+        starsArea.append(stars, slider);
+        control.append(label, starsArea, score);
+        form.appendChild(control);
+
+        ratingInputs[criterion.key] = slider;
+    });
+
+    const commentLabel = document.createElement("label");
+    commentLabel.textContent = "Seu comentário";
+
+    const commentInput = document.createElement("textarea");
+    commentInput.name = "comment";
+    commentInput.placeholder =
+        "Conte como foi sua experiência neste lugar...";
+    commentInput.maxLength = 2000;
+    commentInput.rows = 4;
+
+    commentLabel.appendChild(commentInput);
+    form.appendChild(commentLabel);
+
+    const submitButton = document.createElement("button");
+    submitButton.type = "submit";
+    submitButton.className = "submit-review-button";
+    submitButton.textContent = "Enviar avaliação";
+
+    form.appendChild(submitButton);
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const contributor = nameInput.value.trim();
+        const comment = commentInput.value.trim();
+
+        const avaliacao = {
+            restaurantId,
+            contributor,
+            comment
+        };
+
+        let temNota = false;
+
+        criteria.forEach(criterion => {
+            const slider = ratingInputs[criterion.key];
+
+            if (slider.dataset.touched === "true") {
+                avaliacao[criterion.key] = Number(slider.value);
+                temNota = true;
+            } else {
+                avaliacao[criterion.key] = null;
+            }
+        });
+
+        if (!temNota) {
+            alert("Selecione pelo menos uma nota.");
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando...";
+
+        try {
+            const resposta = await enviarAcao({
+                acao: "adicionarAvaliacao",
+                avaliacao
+            });
+
+            ratings.push(resposta.avaliacao);
+
+            renderRatings(restaurantId);
+        } catch (erro) {
+            alert("Não foi possível enviar sua avaliação: " + erro.message);
+
+            submitButton.disabled = false;
+            submitButton.textContent = "Enviar avaliação";
+        }
+    });
+
+    container.appendChild(form);
 }
 
     carregarDados().then(renderRestaurants);
