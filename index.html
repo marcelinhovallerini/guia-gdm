@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -11,22 +10,30 @@
 
     <header class="header">
         <a href="#" class="logo">guia<span>-gdm</span></a>
-        <p>Nosso pequeno guia gastronômico.</p>
+        <p>Nosso puta guia foda.</p>
     </header>
 
     <main class="container">
 
         <section class="intro">
-            <span class="eyebrow">COMER, DESCOBRIR, COMPARTILHAR</span>
-            <h1>Lugares que<br>merecem ser <em>descobertos.</em></h1>
-            <p>Uma coleção de lugares especiais compartilhados entre amigos.</p>
+            <h1>Lugares mais<br><em>picas</em> de Pira e região</h1>
+        </section>
+
+        <section class="add-section">
+            <div>
+                <span class="eyebrow">CONHECE UM LUGAR LEGAL?</span>
+                <h2>Compartilhe com a gente.</h2>
+                <p>Ajude a aumentar nossa coleção de descobertas.</p>
+            </div>
+            <button class="add-button" id="open-form">
+                + Adicionar lugar
+            </button>
         </section>
 
         <section class="explore">
 
             <div class="section-heading">
                 <div>
-                    <span class="eyebrow">NOSSA COLEÇÃO</span>
                     <h2>Explorar lugares</h2>
                 </div>
                 <span id="total-count" class="count">0 lugares</span>
@@ -59,22 +66,10 @@
 
         </section>
 
-        <section class="add-section">
-            <div>
-                <span class="eyebrow">CONHECE UM LUGAR LEGAL?</span>
-                <h2>Compartilhe com a gente.</h2>
-                <p>Ajude a aumentar nossa coleção de descobertas.</p>
-            </div>
-            <button class="add-button" id="open-form">
-                + Adicionar lugar
-            </button>
-        </section>
-
     </main>
 
     <footer>
         <span class="logo">guia<span>-gdm</span></span>
-        <p>Feito para compartilhar boas descobertas.</p>
     </footer>
 
     <div class="modal" id="modal" hidden>
@@ -84,8 +79,6 @@
             <span class="eyebrow">NOVA DESCOBERTA</span>
             <h2>Adicionar lugar</h2>
             <p>Compartilhe um estabelecimento com os amigos.</p>
-
-            
 
     <form id="restaurant-form">
 
@@ -149,7 +142,6 @@
             Deslize o controle para atribuir uma nota de 0 a 5.
             Você pode usar valores intermediários.
         </p>
-
 
         <div class="rating-control" data-rating-control>
             <label for="rating-food">Comida / produtos</label>
@@ -222,6 +214,22 @@
         <input id="contributor" name="contributor"
             placeholder="Seu nome">
 
+        <div class="form-group">
+            <label for="photos">Fotos do estabelecimento</label>
+
+            <input
+                type="file"
+                id="photos"
+                name="photos"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+            >
+
+            <small>
+                JPG, PNG ou WEBP. Você pode selecionar várias fotos.
+            </small>
+        </div>
+
         <button type="submit" class="submit-button">
             Adicionar ao guia
         </button>
@@ -234,8 +242,6 @@
 
     <!-- FICHA INDIVIDUAL DO ESTABELECIMENTO -->
 
-    
-
     <div class="modal" id="detail-modal" hidden>
         <div class="modal-content detail-content">
 
@@ -246,7 +252,13 @@
             <h2 id="detail-name"></h2>
             <p id="detail-city"></p>
 
-            <div id="detail-main-photo"></div>
+            <div id="detail-gallery" class="detail-gallery">
+
+                <div id="detail-main-photo" class="detail-main-photo"></div>
+
+                <div id="detail-photo-thumbnails" class="detail-photo-thumbnails"></div>
+
+            </div>
 
             <div class="detail-divider"></div>
 
@@ -295,8 +307,6 @@
 
         </div>
     </div>
-
-
 
     <script src="script.js"></script>
 </body>
